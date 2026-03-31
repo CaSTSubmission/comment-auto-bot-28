@@ -1,0 +1,48 @@
+name: Auto Comment Bot
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  comment-on-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get repository owner
+        id: get_owner
+        run: echo "owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+
+      - name: Comment based on labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { issue } = context.payload;
+            const owner = "${{ steps.get_owner.outputs.owner }}";
+            
+            // Check labels
+            const labels = issue.labels.map(label => label.name);
+            
+            let comment = "";
+            
+            if (labels.includes('bug')) {
+              comment = `Thank you. We will fix it. Best regards, ${owner}.`;
+            } else if (labels.includes('feature')) {
+              comment = `Thank you, we will consider to include this feature. Best regards, ${owner}.`;
+            } else if (labels.includes('discussion')) {
+              comment = `Happy to discuss this topic with you. Best regards, ${owner}.`;
+            } else {
+              comment = `Hello, world!`;
+            }
+            
+            // Create comment on the issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: comment
+            });
